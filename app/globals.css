@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Circuit trace animation for section headings */
+@keyframes trace {
+  from { width: 0; }
+  to   { width: 3rem; }
+}
+
+.trace-line {
+  animation: trace 0.6s ease-out forwards;
+}
+
+/* Publication card hover */
+.pub-card:hover .pub-thumb {
+  border-color: #2E7DC8;
+}
+
+/* Print / Download CV */
+@media print {
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: #0A1628 !important;
+  }
+  main {
+    padding-top: 0 !important;
+  }
+  .print-container {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+}
