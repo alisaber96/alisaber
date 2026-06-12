@@ -62,7 +62,7 @@ const PROJECTS = [
     tech:        ['Python', 'TensorFlow', 'MNE-Python', 'CNN', 'Raspberry Pi 4'],
     github:      '#',   // ← replace with your GitHub URL, or set to null to hide
     demo:        null,  // ← replace with a live demo URL, or leave null
-    video:       null,  // ← set to '/videos/proj1.mp4' after adding to /public
+    video:       '/videos/vid1.mov',  // ← set to '/videos/proj1.mp4' after adding to /public
   },
   {
     id:          2,
@@ -72,7 +72,7 @@ const PROJECTS = [
     tech:        ['MATLAB', 'Signal Processing', 'Array Processing', 'MIMO'],
     github:      '#',
     demo:        null,
-    video:       null,
+    video:       '/videos/vid2.mov',
   },
   {
     id:          3,
@@ -82,7 +82,7 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'Xilinx Vivado', 'AXI-Stream', 'RTL Design', 'SPI'],
     github:      '#',
     demo:        null,
-    video:       null,
+    video:       '/videos/vid3.mov',
   },
   {
     id:          4,
@@ -92,7 +92,7 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'PyTorch', 'Hardware Quantisation', 'Systolic Array'],
     github:      '#',
     demo:        null,
-    video:       null,
+    video:       '/videos/vid4.mov',
   },
 ];
 
@@ -294,7 +294,7 @@ function HeroSection() {
             <div className="w-36 h-36 rounded-2xl bg-blueprint border-2 border-signal/20
                             flex items-center justify-center overflow-hidden">
               <img
-                src="/profile.jpg"
+                src="/avatar.jpg"
                 alt="Ali Saber"
                 className="object-cover w-full h-full"
               />
