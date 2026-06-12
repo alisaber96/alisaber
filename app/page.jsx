@@ -1,8 +1,9 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Mail, MapPin, ExternalLink, BookOpen,
-  Play, ChevronDown, ChevronUp,
+  Play, Pause, Volume2, VolumeX,
+  ChevronDown, ChevronUp,
   Linkedin, Send, Github,
 } from 'lucide-react';
 
@@ -60,9 +61,9 @@ const PROJECTS = [
     description: 'Real-time BCI system using CNN-based EEG classification. 94% accuracy on motor imagery tasks with <50 ms latency.',
     details:     'Full pipeline from EEG acquisition to motor intent classification. Uses an 8-channel amplifier with bandpass filtering (8–30 Hz) and common spatial patterns before a 4-layer CNN. Verified on 10 subjects and deployed on embedded hardware for real-time use.',
     tech:        ['Python', 'TensorFlow', 'MNE-Python', 'CNN', 'Raspberry Pi 4'],
-    github:      '#',   // ← replace with your GitHub URL, or set to null to hide
-    demo:        null,  // ← replace with a live demo URL, or leave null
-    video:       '/videos/vid1.mov',  // ← set to '/videos/proj1.mp4' after adding to /public
+    github:      '#',
+    demo:        null,
+    video:       null,
   },
   {
     id:          2,
@@ -72,7 +73,7 @@ const PROJECTS = [
     tech:        ['MATLAB', 'Signal Processing', 'Array Processing', 'MIMO'],
     github:      '#',
     demo:        null,
-    video:       '/videos/vid2.mov',
+    video:       null,
   },
   {
     id:          3,
@@ -82,7 +83,7 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'Xilinx Vivado', 'AXI-Stream', 'RTL Design', 'SPI'],
     github:      '#',
     demo:        null,
-    video:       '/videos/vid3.mov',
+    video:       null,
   },
   {
     id:          4,
@@ -92,8 +93,16 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'PyTorch', 'Hardware Quantisation', 'Systolic Array'],
     github:      '#',
     demo:        null,
-    video:       '/videos/vid4.mov',
+    video:       null,
   },
+];
+
+const SKILLS = [
+  { category: 'Programming', items: ['Python', 'MATLAB', 'C/C++', 'SystemVerilog'] },
+  { category: 'ML / AI',     items: ['TensorFlow', 'PyTorch', 'Keras', 'scikit-learn'] },
+  { category: 'Hardware',    items: ['FPGA (Xilinx)', 'Cadence', 'Multisim', 'AXI-Stream'] },
+  { category: 'Tools',       items: ['Git', 'LaTeX', 'Linux', 'Docker'] },
+  { category: 'Languages',   items: ['Persian (native)', 'English (fluent)'] },
 ];
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -118,45 +127,85 @@ function SectionHeading({ children }) {
   );
 }
 
-// ─── Video area (shared between collapsed + expanded) ────────────────────────
+// ─── Video + controls ─────────────────────────────────────────────────────────
 
-function VideoArea({ proj, videoRef }) {
-  if (proj.video) {
-    return (
-      <video
-        ref={videoRef}
-        src={proj.video}
-        className="w-full h-full object-cover"
-        muted
-        loop
-        playsInline
-      />
-    );
-  }
+function VideoContainer({ proj, videoRef, isPlaying, isMuted, onTogglePlay, onToggleMute, className }) {
   return (
-    <>
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(46,125,200,0.07) 1px, transparent 1px),' +
-            'linear-gradient(90deg, rgba(46,125,200,0.07) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
-      <div className="relative z-10 w-11 h-11 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
-        <Play size={18} className="text-signal ml-0.5" />
-      </div>
-    </>
+    <div className={`relative overflow-hidden flex items-center justify-center bg-blueprint ${className}`}>
+
+      {/* Video or placeholder */}
+      {proj.video ? (
+        <video
+          ref={videoRef}
+          src={proj.video}
+          className="w-full h-full object-cover"
+          loop
+          playsInline
+          /* no muted attribute — plays with sound */
+        />
+      ) : (
+        <>
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(46,125,200,0.07) 1px, transparent 1px),' +
+                'linear-gradient(90deg, rgba(46,125,200,0.07) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+            }}
+          />
+          <div className="relative z-10 w-11 h-11 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
+            <Play size={18} className="text-signal ml-0.5" />
+          </div>
+        </>
+      )}
+
+      {/* Controls bar — only shown when a real video is set */}
+      {proj.video && (
+        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between
+                        px-3 py-2 bg-gradient-to-t from-black/65 to-transparent">
+          <button
+            onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
+            className="p-1.5 rounded-full bg-white/20 hover:bg-white/35 text-white transition-colors"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+            className="p-1.5 rounded-full bg-white/20 hover:bg-white/35 text-white transition-colors"
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
+          >
+            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
 // ─── Project card ─────────────────────────────────────────────────────────────
 
 function ProjectCard({ proj, isExpanded, onToggle }) {
-  const videoRef = useRef(null);
+  const videoRef   = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted,   setIsMuted]   = useState(false);
 
-  // Play video on hover, pause + rewind on leave
+  // Keep isPlaying in sync with actual video events
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !proj.video) return;
+    const onPlay  = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    video.addEventListener('play',  onPlay);
+    video.addEventListener('pause', onPause);
+    return () => {
+      video.removeEventListener('play',  onPlay);
+      video.removeEventListener('pause', onPause);
+    };
+  }, [proj.video]);
+
+  // Hover: auto-play with sound (browser may require a prior click on page)
   const handleMouseEnter = () => {
     if (videoRef.current && proj.video) {
       videoRef.current.play().catch(() => {});
@@ -168,6 +217,21 @@ function ProjectCard({ proj, isExpanded, onToggle }) {
       videoRef.current.currentTime = 0;
     }
   };
+
+  const togglePlay = () => {
+    if (!videoRef.current) return;
+    isPlaying
+      ? videoRef.current.pause()
+      : videoRef.current.play().catch(() => {});
+  };
+
+  const toggleMute = () => {
+    if (!videoRef.current) return;
+    videoRef.current.muted = !videoRef.current.muted;
+    setIsMuted(videoRef.current.muted);
+  };
+
+  const videoProps = { proj, videoRef, isPlaying, isMuted, onTogglePlay: togglePlay, onToggleMute: toggleMute };
 
   return (
     <article
@@ -181,27 +245,20 @@ function ProjectCard({ proj, isExpanded, onToggle }) {
       onMouseLeave={handleMouseLeave}
     >
       {isExpanded ? (
-        /* ── Expanded: side-by-side layout ─────────────────────────────── */
+        /* ── Expanded layout ─────────────────────────────────────────────── */
         <div className="flex flex-col md:flex-row">
+          <VideoContainer {...videoProps} className="md:w-[42%] aspect-video md:aspect-auto" />
 
-          {/* Left: video */}
-          <div className="md:w-[42%] aspect-video md:aspect-auto bg-blueprint
-                          flex items-center justify-center relative overflow-hidden flex-shrink-0">
-            <VideoArea proj={proj} videoRef={videoRef} />
-          </div>
-
-          {/* Right: detail panel */}
           <div className="flex-1 p-6 flex flex-col gap-4">
             <div className="flex items-start justify-between gap-4">
               <h3 className="font-display font-semibold text-xl text-deep-space leading-snug">
                 {proj.title}
               </h3>
-              {/* Close button */}
               <button
                 onClick={onToggle}
                 className="flex-shrink-0 p-1.5 rounded-lg text-slate-mid
                            hover:text-deep-space hover:bg-gray-100 transition-colors"
-                aria-label="Close details"
+                aria-label="Collapse"
               >
                 <ChevronUp size={18} />
               </button>
@@ -209,44 +266,32 @@ function ProjectCard({ proj, isExpanded, onToggle }) {
 
             <p className="text-sm text-slate-mid leading-relaxed">{proj.details}</p>
 
-            {/* Tech stack chips */}
             {proj.tech?.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {proj.tech.map((t) => (
-                  <span
-                    key={t}
-                    className="px-2.5 py-1 text-xs rounded-full bg-blueprint
-                               text-circuit border border-signal/20"
-                  >
+                  <span key={t}
+                        className="px-2.5 py-1 text-xs rounded-full bg-blueprint
+                                   text-circuit border border-signal/20">
                     {t}
                   </span>
                 ))}
               </div>
             )}
 
-            {/* Links */}
             <div className="flex flex-wrap gap-3 mt-auto pt-1">
               {proj.github && (
-                <a
-                  href={proj.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium
-                             text-slate-mid border border-gray-200 rounded-lg px-3.5 py-1.5
-                             hover:border-deep-space hover:text-deep-space transition-all"
-                >
+                <a href={proj.github} target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-1.5 text-sm font-medium
+                              text-slate-mid border border-gray-200 rounded-lg px-3.5 py-1.5
+                              hover:border-deep-space hover:text-deep-space transition-all">
                   <Github size={14} /> GitHub
                 </a>
               )}
               {proj.demo && (
-                <a
-                  href={proj.demo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium
-                             text-white bg-signal rounded-lg px-3.5 py-1.5
-                             hover:bg-circuit transition-colors"
-                >
+                <a href={proj.demo} target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-1.5 text-sm font-medium
+                              text-white bg-signal rounded-lg px-3.5 py-1.5
+                              hover:bg-circuit transition-colors">
                   <ExternalLink size={14} /> Live Demo
                 </a>
               )}
@@ -254,12 +299,9 @@ function ProjectCard({ proj, isExpanded, onToggle }) {
           </div>
         </div>
       ) : (
-        /* ── Collapsed: original card layout ────────────────────────────── */
+        /* ── Collapsed layout ────────────────────────────────────────────── */
         <>
-          <div className="aspect-video bg-blueprint flex items-center justify-center
-                          relative overflow-hidden">
-            <VideoArea proj={proj} videoRef={videoRef} />
-          </div>
+          <VideoContainer {...videoProps} className="aspect-video" />
           <div className="p-5 flex flex-col flex-1">
             <h3 className="font-display font-semibold text-[15px] text-deep-space mb-1.5">
               {proj.title}
@@ -294,7 +336,7 @@ function HeroSection() {
             <div className="w-36 h-36 rounded-2xl bg-blueprint border-2 border-signal/20
                             flex items-center justify-center overflow-hidden">
               <img
-                src="/avatar.jpg"
+                src="/profile.jpg"
                 alt="Ali Saber"
                 className="object-cover w-full h-full"
               />
@@ -364,13 +406,13 @@ function PublicationsSection() {
           {PUBLICATIONS.map((pub) => (
             <li
               key={pub.id}
-              className="pub-card flex items-start gap-4 p-4 rounded-xl
+              className="flex items-start gap-4 p-4 rounded-xl
                          border border-gray-100 hover:border-signal/40
                          hover:shadow-[0_2px_16px_0_rgba(46,125,200,0.08)]
                          transition-all duration-200"
             >
-              <div className="pub-thumb flex-shrink-0 w-[72px] h-[72px] rounded-lg
-                              bg-blueprint border border-gray-200 transition-colors
+              <div className="flex-shrink-0 w-[72px] h-[72px] rounded-lg
+                              bg-blueprint border border-gray-200
                               flex items-center justify-center overflow-hidden">
                 {pub.img ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -404,9 +446,7 @@ function PublicationsSection() {
 
 function ProjectsSection() {
   const [expandedId, setExpandedId] = useState(null);
-
-  const toggle = (id) =>
-    setExpandedId((prev) => (prev === id ? null : id));
+  const toggle = (id) => setExpandedId((prev) => (prev === id ? null : id));
 
   return (
     <section id="projects" className="py-16 bg-lab">
@@ -427,6 +467,39 @@ function ProjectsSection() {
   );
 }
 
+// ─── Section: Skills ─────────────────────────────────────────────────────────
+
+function SkillsSection() {
+  return (
+    <section id="skills" className="py-16 bg-white">
+      <div className="max-w-5xl mx-auto px-6">
+        <SectionHeading>Skills</SectionHeading>
+        <div className="flex flex-col gap-6">
+          {SKILLS.map(({ category, items }) => (
+            <div key={category} className="flex flex-col sm:flex-row sm:items-start gap-3">
+              <span className="w-28 flex-shrink-0 text-sm font-semibold text-deep-space pt-0.5">
+                {category}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {items.map((item) => (
+                  <span
+                    key={item}
+                    className="px-3 py-1.5 text-sm rounded-full bg-lab
+                               text-slate-mid border border-gray-200
+                               hover:border-signal/50 hover:text-circuit transition-colors"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Section: Contact ────────────────────────────────────────────────────────
 
 const CONTACT_ITEMS = [
@@ -438,7 +511,7 @@ const CONTACT_ITEMS = [
 
 function ContactSection() {
   return (
-    <section id="contact" className="py-16 bg-white">
+    <section id="contact" className="py-16 bg-lab">
       <div className="max-w-5xl mx-auto px-6">
         <SectionHeading>Contact</SectionHeading>
         <ul className="flex flex-col gap-4 max-w-sm">
@@ -491,6 +564,7 @@ export default function HomePage() {
       <AboutSection />
       <PublicationsSection />
       <ProjectsSection />
+      <SkillsSection />
       <ContactSection />
       <Footer />
     </main>
