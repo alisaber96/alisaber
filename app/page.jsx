@@ -63,7 +63,7 @@ const PROJECTS = [
     tech:        ['Python', 'TensorFlow', 'MNE-Python', 'CNN', 'Raspberry Pi 4'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
   {
     id:          2,
@@ -73,7 +73,7 @@ const PROJECTS = [
     tech:        ['MATLAB', 'Signal Processing', 'Array Processing', 'MIMO'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
   {
     id:          3,
@@ -83,7 +83,7 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'Xilinx Vivado', 'AXI-Stream', 'RTL Design', 'SPI'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
   {
     id:          4,
@@ -93,7 +93,7 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'PyTorch', 'Hardware Quantisation', 'Systolic Array'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
 ];
 
@@ -270,9 +270,9 @@ function ProjectCard({ proj, isExpanded, isAnyOtherExpanded, onToggle }) {
     setIsMuted(isAnyOtherExpanded);
     videoRef.current.play().catch(() => {
       // Browser blocked autoplay with sound (common on first page load)
-      // Silently retry muted — muted autoplay is always allowed by browsers
+      // Retry muted — the UI keeps showing the unmuted icon (intended state)
+      // so clicking the volume button will properly unmute on first interaction
       videoRef.current.muted = true;
-      setIsMuted(true);
       videoRef.current.play().catch(() => {});
     });
   };
