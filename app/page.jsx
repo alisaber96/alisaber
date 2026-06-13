@@ -129,7 +129,8 @@ function SectionHeading({ children }) {
 
 // ─── Video + controls ─────────────────────────────────────────────────────────
 
-function VideoContainer({ proj, videoRef, isPlaying, isMuted, onTogglePlay, onToggleMute, className }) {
+function VideoContainer({ proj, videoRef, isPlaying, isMuted, progress,
+                          onTogglePlay, onToggleMute, onSeek, className }) {
   return (
     <div className={`relative overflow-hidden flex items-center justify-center bg-blueprint ${className}`}>
 
@@ -141,7 +142,6 @@ function VideoContainer({ proj, videoRef, isPlaying, isMuted, onTogglePlay, onTo
           className="w-full h-full object-cover"
           loop
           playsInline
-          /* no muted attribute — plays with sound */
         />
       ) : (
         <>
@@ -160,24 +160,60 @@ function VideoContainer({ proj, videoRef, isPlaying, isMuted, onTogglePlay, onTo
         </>
       )}
 
-      {/* Controls bar — only shown when a real video is set */}
+      {/* Controls — only when a real video is set */}
       {proj.video && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between
-                        px-3 py-2 bg-gradient-to-t from-black/65 to-transparent">
-          <button
-            onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
-            className="p-1.5 rounded-full bg-white/20 hover:bg-white/35 text-white transition-colors"
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
-            className="p-1.5 rounded-full bg-white/20 hover:bg-white/35 text-white transition-colors"
-            aria-label={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-          </button>
+        <div className="absolute bottom-0 left-0 right-0 z-10
+                        bg-gradient-to-t from-black/70 to-transparent pt-6">
+          {/* Button row + progress bar */}
+          <div className="flex items-center gap-2 px-3 pb-2">
+
+            {/* Play / Pause */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
+              className="flex-shrink-0 p-1.5 rounded-full bg-white/20 hover:bg-white/35
+                         text-white transition-colors"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+            >
+              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+            </button>
+
+            {/* Progress bar */}
+            <div
+              className="group/bar flex-1 relative flex items-center h-5 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                onSeek(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)));
+              }}
+            >
+              {/* Track */}
+              <div className="w-full h-[3px] bg-white/30 rounded-full overflow-hidden">
+                {/* Fill */}
+                <div
+                  className="h-full bg-white rounded-full"
+                  style={{ width: `${progress * 100}%` }}
+                />
+              </div>
+              {/* Thumb — appears on hover */}
+              <div
+                className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow
+                           -translate-y-1/2 -translate-x-1/2
+                           opacity-0 group-hover/bar:opacity-100 transition-opacity
+                           pointer-events-none"
+                style={{ left: `${progress * 100}%` }}
+              />
+            </div>
+
+            {/* Mute / Unmute */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+              className="flex-shrink-0 p-1.5 rounded-full bg-white/20 hover:bg-white/35
+                         text-white transition-colors"
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -187,34 +223,53 @@ function VideoContainer({ proj, videoRef, isPlaying, isMuted, onTogglePlay, onTo
 // ─── Project card ─────────────────────────────────────────────────────────────
 
 function ProjectCard({ proj, isExpanded, onToggle }) {
-  const videoRef   = useRef(null);
+  const videoRef    = useRef(null);
+  const didMount    = useRef(false);          // skip first-render expand effect
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted,   setIsMuted]   = useState(false);
+  const [progress,  setProgress]  = useState(0);
 
-  // Keep isPlaying in sync with actual video events
+  // Sync play/pause state + progress with the video element
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !proj.video) return;
-    const onPlay  = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    video.addEventListener('play',  onPlay);
-    video.addEventListener('pause', onPause);
+    const onPlay       = () => setIsPlaying(true);
+    const onPause      = () => setIsPlaying(false);
+    const onTimeUpdate = () => {
+      if (video.duration) setProgress(video.currentTime / video.duration);
+    };
+    video.addEventListener('play',       onPlay);
+    video.addEventListener('pause',      onPause);
+    video.addEventListener('timeupdate', onTimeUpdate);
     return () => {
-      video.removeEventListener('play',  onPlay);
-      video.removeEventListener('pause', onPause);
+      video.removeEventListener('play',       onPlay);
+      video.removeEventListener('pause',      onPause);
+      video.removeEventListener('timeupdate', onTimeUpdate);
     };
   }, [proj.video]);
 
-  // Hover: auto-play with sound (browser may require a prior click on page)
+  // When the card expands → auto-play; when it collapses → pause (keep position)
+  useEffect(() => {
+    if (!didMount.current) { didMount.current = true; return; }
+    if (!videoRef.current || !proj.video) return;
+    if (isExpanded) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+      // position is intentionally kept so re-hover resumes from same spot
+    }
+  }, [isExpanded, proj.video]);
+
+  // Hover only acts when the card is collapsed
   const handleMouseEnter = () => {
-    if (videoRef.current && proj.video) {
+    if (videoRef.current && proj.video && !isExpanded) {
       videoRef.current.play().catch(() => {});
     }
   };
+  // Pause on leave (no rewind) — video resumes from same position on next hover
   const handleMouseLeave = () => {
-    if (videoRef.current && proj.video) {
+    if (videoRef.current && proj.video && !isExpanded) {
       videoRef.current.pause();
-      videoRef.current.currentTime = 0;
     }
   };
 
@@ -231,7 +286,18 @@ function ProjectCard({ proj, isExpanded, onToggle }) {
     setIsMuted(videoRef.current.muted);
   };
 
-  const videoProps = { proj, videoRef, isPlaying, isMuted, onTogglePlay: togglePlay, onToggleMute: toggleMute };
+  const handleSeek = (ratio) => {
+    if (videoRef.current && videoRef.current.duration) {
+      videoRef.current.currentTime = ratio * videoRef.current.duration;
+    }
+  };
+
+  const videoProps = {
+    proj, videoRef, isPlaying, isMuted, progress,
+    onTogglePlay: togglePlay,
+    onToggleMute: toggleMute,
+    onSeek:       handleSeek,
+  };
 
   return (
     <article
