@@ -43,7 +43,7 @@ const PUBLICATIONS = [
     venue:   'IEEE International Conference on Signal Processing, 2023',
     link:    '#',
     img:     null,
-  }, 
+  },
   {
     id: 3,
     title:   'Low-Power VLSI Architecture for Real-Time FFT in Embedded Signal Processors',
@@ -127,128 +127,36 @@ function SectionHeading({ children }) {
   );
 }
 
-// ─── Video + controls ─────────────────────────────────────────────────────────
-
-function VideoContainer({ proj, videoRef, isPlaying, isMuted, progress,
-                          onTogglePlay, onToggleMute, onSeek, className }) {
-  return (
-    <div className={`relative overflow-hidden flex items-center justify-center bg-blueprint ${className}`}>
-
-      {/* Video or placeholder */}
-      {proj.video ? (
-        <video
-          ref={videoRef}
-          src={proj.video}
-          className="w-full h-full object-cover"
-          loop
-          playsInline
-        />
-      ) : (
-        <>
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                'linear-gradient(rgba(46,125,200,0.07) 1px, transparent 1px),' +
-                'linear-gradient(90deg, rgba(46,125,200,0.07) 1px, transparent 1px)',
-              backgroundSize: '28px 28px',
-            }}
-          />
-          <div className="relative z-10 w-11 h-11 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
-            <Play size={18} className="text-signal ml-0.5" />
-          </div>
-        </>
-      )}
-
-      {/* Controls — only when a real video is set */}
-      {proj.video && (
-        <div className="absolute bottom-0 left-0 right-0 z-10
-                        bg-gradient-to-t from-black/70 to-transparent pt-6">
-          {/* Button row + progress bar */}
-          <div className="flex items-center gap-2 px-3 pb-2">
-
-            {/* Play / Pause */}
-            <button
-              onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
-              className="flex-shrink-0 p-1.5 rounded-full bg-white/20 hover:bg-white/35
-                         text-white transition-colors"
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-            </button>
-
-            {/* Progress bar */}
-            <div
-              className="group/bar flex-1 relative flex items-center h-5 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                onSeek(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)));
-              }}
-            >
-              {/* Track */}
-              <div className="w-full h-[3px] bg-white/30 rounded-full overflow-hidden">
-                {/* Fill */}
-                <div
-                  className="h-full bg-white rounded-full"
-                  style={{ width: `${progress * 100}%` }}
-                />
-              </div>
-              {/* Thumb — appears on hover */}
-              <div
-                className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow
-                           -translate-y-1/2 -translate-x-1/2
-                           opacity-0 group-hover/bar:opacity-100 transition-opacity
-                           pointer-events-none"
-                style={{ left: `${progress * 100}%` }}
-              />
-            </div>
-
-            {/* Mute / Unmute */}
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
-              className="flex-shrink-0 p-1.5 rounded-full bg-white/20 hover:bg-white/35
-                         text-white transition-colors"
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Project card ─────────────────────────────────────────────────────────────
+// The <video> element lives in ONE fixed position in the JSX tree so React
+// never unmounts/remounts it — refs, event listeners and playback state all
+// stay alive across expand / collapse.
 
-function ProjectCard({ proj, isExpanded, isAnyOtherExpanded, onToggle }) {
-  const videoRef    = useRef(null);
-  const didMount    = useRef(false);          // skip first-render expand effect
+function ProjectCard({ proj, isExpanded, onToggle }) {
+  const videoRef = useRef(null);
+  const didMount = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted,   setIsMuted]   = useState(false);
   const [progress,  setProgress]  = useState(0);
 
-  // Sync play/pause state + progress with the video element
+  // Attach play / pause / timeupdate listeners once
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !proj.video) return;
+    const v = videoRef.current;
+    if (!v || !proj.video) return;
     const onPlay       = () => setIsPlaying(true);
     const onPause      = () => setIsPlaying(false);
-    const onTimeUpdate = () => {
-      if (video.duration) setProgress(video.currentTime / video.duration);
-    };
-    video.addEventListener('play',       onPlay);
-    video.addEventListener('pause',      onPause);
-    video.addEventListener('timeupdate', onTimeUpdate);
+    const onTimeUpdate = () => { if (v.duration) setProgress(v.currentTime / v.duration); };
+    v.addEventListener('play',       onPlay);
+    v.addEventListener('pause',      onPause);
+    v.addEventListener('timeupdate', onTimeUpdate);
     return () => {
-      video.removeEventListener('play',       onPlay);
-      video.removeEventListener('pause',      onPause);
-      video.removeEventListener('timeupdate', onTimeUpdate);
+      v.removeEventListener('play',       onPlay);
+      v.removeEventListener('pause',      onPause);
+      v.removeEventListener('timeupdate', onTimeUpdate);
     };
   }, [proj.video]);
 
-  // When the card expands → unmute + play with sound; collapse → pause (keep position)
+  // Expand → unmute + play with sound; collapse → pause (keep position)
   useEffect(() => {
     if (!didMount.current) { didMount.current = true; return; }
     if (!videoRef.current || !proj.video) return;
@@ -258,145 +166,169 @@ function ProjectCard({ proj, isExpanded, isAnyOtherExpanded, onToggle }) {
       videoRef.current.play().catch(() => {});
     } else {
       videoRef.current.pause();
-      // position kept so re-hover resumes from same spot
     }
   }, [isExpanded, proj.video]);
 
-  // Hover only acts when the card is collapsed
+  // Hover: always muted — works from first page load, no browser restriction
   const handleMouseEnter = () => {
     if (!videoRef.current || !proj.video || isExpanded) return;
-    // Mute if another card is currently expanded and playing with sound
-    videoRef.current.muted = isAnyOtherExpanded;
-    setIsMuted(isAnyOtherExpanded);
-    videoRef.current.play().catch(() => {
-      // Browser blocked autoplay with sound (common on first page load)
-      // Retry muted — the UI keeps showing the unmuted icon (intended state)
-      // so clicking the volume button will properly unmute on first interaction
-      videoRef.current.muted = true;
-      videoRef.current.play().catch(() => {});
-    });
+    videoRef.current.muted = true;
+    videoRef.current.play().catch(() => {});
   };
-  // Pause on leave (no rewind) — video resumes from same position on next hover
   const handleMouseLeave = () => {
-    if (videoRef.current && proj.video && !isExpanded) {
-      videoRef.current.pause();
-    }
+    if (!videoRef.current || !proj.video || isExpanded) return;
+    videoRef.current.pause();
   };
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    isPlaying
-      ? videoRef.current.pause()
-      : videoRef.current.play().catch(() => {});
+    isPlaying ? videoRef.current.pause() : videoRef.current.play().catch(() => {});
   };
-
   const toggleMute = () => {
     if (!videoRef.current) return;
     videoRef.current.muted = !videoRef.current.muted;
     setIsMuted(videoRef.current.muted);
   };
-
   const handleSeek = (ratio) => {
-    if (videoRef.current && videoRef.current.duration) {
+    if (videoRef.current?.duration)
       videoRef.current.currentTime = ratio * videoRef.current.duration;
-    }
-  };
-
-  const videoProps = {
-    proj, videoRef, isPlaying, isMuted, progress,
-    onTogglePlay: togglePlay,
-    onToggleMute: toggleMute,
-    onSeek:       handleSeek,
   };
 
   return (
     <article
-      className={`bg-white rounded-2xl overflow-hidden border flex flex-col
-        transition-shadow duration-200
+      className={`bg-white rounded-2xl overflow-hidden border transition-shadow duration-200
         ${isExpanded
           ? 'md:col-span-2 border-signal/40 shadow-[0_4px_32px_0_rgba(46,125,200,0.13)]'
-          : 'border-gray-100 hover:shadow-[0_4px_24px_0_rgba(10,22,40,0.10)]'
-        }`}
+          : 'border-gray-100 hover:shadow-[0_4px_24px_0_rgba(10,22,40,0.10)]'}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {isExpanded ? (
-        /* ── Expanded layout ─────────────────────────────────────────────── */
-        <div className="flex flex-col md:flex-row">
-          <VideoContainer {...videoProps} className="md:w-[42%] aspect-video md:aspect-auto" />
+      {/* Outer flex changes direction on expand — video always stays first child */}
+      <div className={`flex ${isExpanded ? 'flex-col md:flex-row' : 'flex-col'}`}>
 
-          <div className="flex-1 p-6 flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="font-display font-semibold text-xl text-deep-space leading-snug">
-                {proj.title}
-              </h3>
-              <button
-                onClick={onToggle}
-                className="flex-shrink-0 p-1.5 rounded-lg text-slate-mid
-                           hover:text-deep-space hover:bg-gray-100 transition-colors"
-                aria-label="Collapse"
-              >
-                <ChevronUp size={18} />
-              </button>
-            </div>
+        {/* ── Video area — NEVER moves in the tree ── */}
+        <div className={`relative flex-shrink-0 bg-blueprint flex items-center justify-center overflow-hidden
+          ${isExpanded ? 'aspect-video md:aspect-auto md:w-[42%]' : 'aspect-video'}`}>
 
-            <p className="text-sm text-slate-mid leading-relaxed">{proj.details}</p>
-
-            {proj.tech?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {proj.tech.map((t) => (
-                  <span key={t}
-                        className="px-2.5 py-1 text-xs rounded-full bg-blueprint
-                                   text-circuit border border-signal/20">
-                    {t}
-                  </span>
-                ))}
+          {proj.video ? (
+            <video ref={videoRef} src={proj.video}
+                   className="w-full h-full object-cover" loop playsInline />
+          ) : (
+            <>
+              <div className="absolute inset-0" style={{
+                backgroundImage:
+                  'linear-gradient(rgba(46,125,200,0.07) 1px, transparent 1px),' +
+                  'linear-gradient(90deg, rgba(46,125,200,0.07) 1px, transparent 1px)',
+                backgroundSize: '28px 28px',
+              }} />
+              <div className="relative z-10 w-11 h-11 rounded-full bg-white/80
+                              flex items-center justify-center shadow-sm">
+                <Play size={18} className="text-signal ml-0.5" />
               </div>
-            )}
+            </>
+          )}
 
-            <div className="flex flex-wrap gap-3 mt-auto pt-1">
-              {proj.github && (
-                <a href={proj.github} target="_blank" rel="noopener noreferrer"
-                   className="inline-flex items-center gap-1.5 text-sm font-medium
-                              text-slate-mid border border-gray-200 rounded-lg px-3.5 py-1.5
-                              hover:border-deep-space hover:text-deep-space transition-all">
-                  <Github size={14} /> GitHub
-                </a>
-              )}
-              {proj.demo && (
-                <a href={proj.demo} target="_blank" rel="noopener noreferrer"
-                   className="inline-flex items-center gap-1.5 text-sm font-medium
-                              text-white bg-signal rounded-lg px-3.5 py-1.5
-                              hover:bg-circuit transition-colors">
-                  <ExternalLink size={14} /> Live Demo
-                </a>
-              )}
+          {/* Controls overlay */}
+          {proj.video && (
+            <div className="absolute bottom-0 left-0 right-0 z-10
+                            bg-gradient-to-t from-black/70 to-transparent pt-6">
+              <div className="flex items-center gap-2 px-3 pb-2">
+                <button onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                        className="flex-shrink-0 p-1.5 rounded-full bg-white/20
+                                   hover:bg-white/35 text-white transition-colors"
+                        aria-label={isPlaying ? 'Pause' : 'Play'}>
+                  {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+
+                <div className="group/bar flex-1 relative flex items-center h-5 cursor-pointer"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       const r = e.currentTarget.getBoundingClientRect();
+                       handleSeek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)));
+                     }}>
+                  <div className="w-full h-[3px] bg-white/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-white rounded-full"
+                         style={{ width: `${progress * 100}%` }} />
+                  </div>
+                  <div className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow
+                                  -translate-y-1/2 -translate-x-1/2 pointer-events-none
+                                  opacity-0 group-hover/bar:opacity-100 transition-opacity"
+                       style={{ left: `${progress * 100}%` }} />
+                </div>
+
+                <button onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                        className="flex-shrink-0 p-1.5 rounded-full bg-white/20
+                                   hover:bg-white/35 text-white transition-colors"
+                        aria-label={isMuted ? 'Unmute' : 'Mute'}>
+                  {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      ) : (
-        /* ── Collapsed layout ────────────────────────────────────────────── */
-        <>
-          <VideoContainer {...videoProps} className="aspect-video" />
-          <div className="p-5 flex flex-col flex-1">
-            <h3 className="font-display font-semibold text-[15px] text-deep-space mb-1.5">
+
+        {/* ── Details area ── */}
+        <div className={`flex flex-col flex-1 ${isExpanded ? 'p-6 gap-4' : 'p-5'}`}>
+          <div className="flex items-start justify-between gap-4">
+            <h3 className={`font-display font-semibold text-deep-space leading-snug
+              ${isExpanded ? 'text-xl' : 'text-[15px]'}`}>
               {proj.title}
             </h3>
-            <p className="text-sm text-slate-mid leading-relaxed flex-1">
-              {proj.description}
-            </p>
-            <button
-              onClick={onToggle}
-              className="mt-4 self-start inline-flex items-center gap-1 text-sm font-medium
-                         text-signal border border-signal/30 rounded-lg px-3.5 py-1.5
-                         hover:bg-signal hover:text-white hover:border-signal
-                         transition-all duration-150"
-            >
-              View details <ChevronDown size={14} />
-            </button>
+            {isExpanded && (
+              <button onClick={onToggle}
+                      className="flex-shrink-0 p-1.5 rounded-lg text-slate-mid
+                                 hover:text-deep-space hover:bg-gray-100 transition-colors"
+                      aria-label="Collapse">
+                <ChevronUp size={18} />
+              </button>
+            )}
           </div>
-        </>
-      )}
+
+          <p className="text-sm text-slate-mid leading-relaxed flex-1">
+            {isExpanded ? proj.details : proj.description}
+          </p>
+
+          {isExpanded && proj.tech?.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {proj.tech.map((t) => (
+                <span key={t} className="px-2.5 py-1 text-xs rounded-full bg-blueprint
+                                         text-circuit border border-signal/20">{t}</span>
+              ))}
+            </div>
+          )}
+
+          <div className={`flex flex-wrap gap-3 ${isExpanded ? 'mt-auto pt-1' : 'mt-4'}`}>
+            {isExpanded ? (
+              <>
+                {proj.github && (
+                  <a href={proj.github} target="_blank" rel="noopener noreferrer"
+                     className="inline-flex items-center gap-1.5 text-sm font-medium
+                                text-slate-mid border border-gray-200 rounded-lg px-3.5 py-1.5
+                                hover:border-deep-space hover:text-deep-space transition-all">
+                    <Github size={14} /> GitHub
+                  </a>
+                )}
+                {proj.demo && (
+                  <a href={proj.demo} target="_blank" rel="noopener noreferrer"
+                     className="inline-flex items-center gap-1.5 text-sm font-medium
+                                text-white bg-signal rounded-lg px-3.5 py-1.5
+                                hover:bg-circuit transition-colors">
+                    <ExternalLink size={14} /> Live Demo
+                  </a>
+                )}
+              </>
+            ) : (
+              <button onClick={onToggle}
+                      className="self-start inline-flex items-center gap-1 text-sm font-medium
+                                 text-signal border border-signal/30 rounded-lg px-3.5 py-1.5
+                                 hover:bg-signal hover:text-white hover:border-signal
+                                 transition-all duration-150">
+                View details <ChevronDown size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </article>
   );
 }
@@ -534,7 +466,6 @@ function ProjectsSection() {
               key={proj.id}
               proj={proj}
               isExpanded={expandedId === proj.id}
-              isAnyOtherExpanded={expandedId !== null && expandedId !== proj.id}
               onToggle={() => toggle(proj.id)}
             />
           ))}
