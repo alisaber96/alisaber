@@ -63,7 +63,7 @@ const PROJECTS = [
     tech:        ['Python', 'TensorFlow', 'MNE-Python', 'CNN', 'Raspberry Pi 4'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
   {
     id:          2,
@@ -73,7 +73,7 @@ const PROJECTS = [
     tech:        ['MATLAB', 'Signal Processing', 'Array Processing', 'MIMO'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
   {
     id:          3,
@@ -83,7 +83,7 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'Xilinx Vivado', 'AXI-Stream', 'RTL Design', 'SPI'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
   {
     id:          4,
@@ -93,7 +93,7 @@ const PROJECTS = [
     tech:        ['SystemVerilog', 'PyTorch', 'Hardware Quantisation', 'Systolic Array'],
     github:      '#',
     demo:        null,
-    video:       'videos/vid1.mov',
+    video:       null,
   },
 ];
 
@@ -222,7 +222,7 @@ function VideoContainer({ proj, videoRef, isPlaying, isMuted, progress,
 
 // ─── Project card ─────────────────────────────────────────────────────────────
 
-function ProjectCard({ proj, isExpanded, onToggle }) {
+function ProjectCard({ proj, isExpanded, isAnyOtherExpanded, onToggle }) {
   const videoRef    = useRef(null);
   const didMount    = useRef(false);          // skip first-render expand effect
   const [isPlaying, setIsPlaying] = useState(false);
@@ -248,23 +248,33 @@ function ProjectCard({ proj, isExpanded, onToggle }) {
     };
   }, [proj.video]);
 
-  // When the card expands → auto-play; when it collapses → pause (keep position)
+  // When the card expands → unmute + play with sound; collapse → pause (keep position)
   useEffect(() => {
     if (!didMount.current) { didMount.current = true; return; }
     if (!videoRef.current || !proj.video) return;
     if (isExpanded) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
       videoRef.current.play().catch(() => {});
     } else {
       videoRef.current.pause();
-      // position is intentionally kept so re-hover resumes from same spot
+      // position kept so re-hover resumes from same spot
     }
   }, [isExpanded, proj.video]);
 
   // Hover only acts when the card is collapsed
   const handleMouseEnter = () => {
-    if (videoRef.current && proj.video && !isExpanded) {
+    if (!videoRef.current || !proj.video || isExpanded) return;
+    // Mute if another card is currently expanded and playing with sound
+    videoRef.current.muted = isAnyOtherExpanded;
+    setIsMuted(isAnyOtherExpanded);
+    videoRef.current.play().catch(() => {
+      // Browser blocked autoplay with sound (common on first page load)
+      // Silently retry muted — muted autoplay is always allowed by browsers
+      videoRef.current.muted = true;
+      setIsMuted(true);
       videoRef.current.play().catch(() => {});
-    }
+    });
   };
   // Pause on leave (no rewind) — video resumes from same position on next hover
   const handleMouseLeave = () => {
@@ -524,6 +534,7 @@ function ProjectsSection() {
               key={proj.id}
               proj={proj}
               isExpanded={expandedId === proj.id}
+              isAnyOtherExpanded={expandedId !== null && expandedId !== proj.id}
               onToggle={() => toggle(proj.id)}
             />
           ))}
