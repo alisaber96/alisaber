@@ -11,46 +11,58 @@ import {
 
 const PROFILE = {
   name:        'M. Ali Saber',
-  degree:      "Master's degree in EEE",
+  degree:      "Master's Degree in EEE, specializing in Digital Systems",
   university:  'Tehran University',
-  gradYear:    '2024',
+  gradYear:    '2023',
   field:       'Signal Processing & Embedded Systems',
-  email:       'ali.saber@yahoo.com',
+  email:       'malisaber@yahoo.com',
   location:    'Shiraz, Fars, Iran',
-  scholarUrl:  'https://scholar.google.com/citations?user=XXXX',
-  telegramUrl: 'https://t.me/your_username',
-  linkedinUrl: 'https://linkedin.com/in/your-profile',
+  scholarUrl:  'https://scholar.google.com/citations?user=x3XHBCcAAAAJ&hl=en',
+  telegramUrl: 'https://t.me/Malisaber',
+  linkedinUrl: 'https://www.linkedin.com/in/ali-saber/',
   address:     'Shiraz, Fars, Iran',
-  bio: `Replace this paragraph with your own academic biography. Describe your
-  research interests, what problems you work on, your methodology, and what
-  motivates your work. A couple of sentences about your background and where
-  you are headed makes this section compelling to collaborators and recruiters.`,
+  bio: `Ali Saber holds a B.Sc. degree in Electrical Engineering and 
+  an M.Sc. degree in Electrical and Electronics Engineering with a specialization in Digital Systems. 
+  His research interests include computer architecture, hardware acceleration, near-memory computing, 
+  embedded systems, signal processing, and machine learning. His master's research focused on proposing
+  and implementing a near-memory processing system and developing efficient communication mechanisms 
+  between host processors and off-chip 3D memory. 
+  He is currently interested in pursuing Ph.D. studies in machine learning, artificial intelligence, 
+  computer architecture, near-memory and in-memory computing, high-performance computing, and quantum computing.`,
 };
 
 const PUBLICATIONS = [
   {
     id: 1,
-    title:   'Deep Convolutional Networks for EEG Signal Classification in BCI Systems',
-    authors: 'M. Ali Saber, Co-Author A, Co-Author B',
-    venue:   'IEEE Transactions on Neural Systems and Rehabilitation Engineering, 2024',
-    link:    '#',
-    img:     null,
+    title:   'An Efficient RTL Design for a Wearable Brain–Computer Interface',
+    authors: 'Tahereh Vasei, Mohamad Ali Saber, Alireza Nahvy, and Zainalabedin Navabi',
+    venue:   'IET Computers & Digital Techniques, 2024',
+    link:    'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=x3XHBCcAAAAJ&citation_for_view=x3XHBCcAAAAJ:9yKSN-GCB0IC',
+    img:     'BCI.jpg',
   },
   {
     id: 2,
-    title:   'Adaptive Beamforming Algorithms for MIMO Radar Under Clutter Conditions',
-    authors: 'M. Ali Saber, Co-Author A',
-    venue:   'IEEE International Conference on Signal Processing, 2023',
-    link:    '#',
-    img:     null,
+    title:   'On-chip training of crosstalk predictors to fit uncertainties',
+    authors: 'Rezgar Sadeghi, Ehsan Akbari, Mohamad Ali Saber',
+    venue:   'IEEE European Test Symposium (ETS), 2022',
+    link:    'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=x3XHBCcAAAAJ&citation_for_view=x3XHBCcAAAAJ:u5HHmVD_uO8C',
+    img:     'OCT.jpg',
   },
   {
     id: 3,
-    title:   'Low-Power VLSI Architecture for Real-Time FFT in Embedded Signal Processors',
-    authors: 'M. Ali Saber, Co-Author A, Co-Author B, Co-Author C',
-    venue:   'Journal of Circuits, Systems and Computers, 2022',
+    title:   'DiBA: n-Dimensional Bitslice Architecture for LSTM Implementation',
+    authors: 'Mahboobe Sadeghipour Roodsari, Mohamad Ali Saber, Zainalabedin Navabi',
+    venue:   '23rd International Symposium on Design and Diagnostics of Electronic Circuits & Systems (DDECS), 2020',
+    link:    'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=x3XHBCcAAAAJ&citation_for_view=x3XHBCcAAAAJ:u-x6o8ySG0sC',
+    img:     'DIBA.jpg',
+  },
+  {
+    id: 4,
+    title:   'NEMESIS: A 3D Memory-Based Near-Memory Processing Architecture for CNN Acceleration',
+    authors: 'Mohamad Ali Saber, Zainalabedin Navabi',
+    venue:   'Under review, 2026',
     link:    '#',
-    img:     null,
+    img:     'mine.png',
   },
 ];
 
@@ -98,9 +110,11 @@ const PROJECTS = [
 ];
 
 const SKILLS = [
-  { category: 'Programming', items: ['Python', 'MATLAB', 'C/C++', 'SystemVerilog'] },
+  { category: 'Programming', items: ['Python', 'MATLAB', 'C/C++', 'Assembly (AVR/X86/RISC-V)'] },
+  { category: 'HDL',		 items: ['VHDL', 'Verilog', 'SystemVerilog', 'SystemC', 'SystemC-AMS', 'Chisel'] },
   { category: 'ML / AI',     items: ['TensorFlow', 'PyTorch', 'Keras', 'scikit-learn'] },
-  { category: 'Hardware',    items: ['FPGA (Xilinx)', 'Cadence', 'Multisim', 'AXI-Stream'] },
+  { category: 'Hardware',    items: ['FPGA', 'ARM', 'AVR'] },
+  { category: 'App',         items: ['Simulink', 'Xilinx Vivado ', 'Xilinx ISE', 'Cadence', 'Design Compiler', 'ModelSim', 'Multisim'] },
   { category: 'Tools',       items: ['Git', 'LaTeX', 'Linux', 'Docker'] },
   { category: 'Languages',   items: ['Persian (native)', 'English (fluent)'] },
 ];
@@ -169,11 +183,16 @@ function ProjectCard({ proj, isExpanded, onToggle }) {
     }
   }, [isExpanded, proj.video]);
 
-  // Hover: always muted — works from first page load, no browser restriction
+  // Hover: try with sound, fall back to muted only if browser blocks it
   const handleMouseEnter = () => {
     if (!videoRef.current || !proj.video || isExpanded) return;
-    videoRef.current.muted = true;
-    videoRef.current.play().catch(() => {});
+    videoRef.current.muted = false;
+    videoRef.current.play().catch(() => {
+      // Browser blocked unmuted autoplay (requires a user interaction first)
+      // Retry muted — after any click on the page, sound will work on next hover
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+    });
   };
   const handleMouseLeave = () => {
     if (!videoRef.current || !proj.video || isExpanded) return;
